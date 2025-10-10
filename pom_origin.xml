@@ -1,89 +1,86 @@
-<!-- pom.xml -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.lauriewired</groupId>
-  <artifactId>GhidraMCP-P</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <artifactId>GhidraMCP</artifactId>
   <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
   <name>GhidraMCP</name>
   <url>http://maven.apache.org</url>
 
-  <!-- 전역 속성: JDK 21, UTF-8 -->
-  <properties>
-    <maven.compiler.release>21</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.parameters>true</maven.compiler.parameters>
-  </properties>
-
   <dependencies>
-    <!-- ✅ systemPath 제거: 일반 의존성으로 전환 (위 install:install-file 선행 필요) -->
+    <!-- Ghidra JARs as system-scoped dependencies -->
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Generic</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Generic.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>SoftwareModeling</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/SoftwareModeling.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Project</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Project.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Docking</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Docking.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Decompiler</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Decompiler.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Utility</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Utility.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Base</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Base.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>ghidra</groupId>
       <artifactId>Gui</artifactId>
       <version>11.3.2</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Gui.jar</systemPath>
     </dependency>
 
-    <!-- 테스트: JUnit4 최신 계열 권장 -->
+    <!-- JUnit (test only) -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
-      <!-- JDK 21 컴파일러 지정 -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <configuration>
-          <release>${maven.compiler.release}</release>
-          <showWarnings>true</showWarnings>
-        </configuration>
-      </plugin>
-
-      <!-- JAR: 커스텀 MANIFEST 사용 + 고정 파일명 -->
+      <!-- Use custom MANIFEST.MF -->
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.2.2</version>
@@ -91,27 +88,36 @@
           <archive>
             <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
           </archive>
+          <!-- Set a fixed name for the JAR without version -->
           <finalName>GhidraMCP</finalName>
+          <!-- Exclude the App class -->
           <excludes>
             <exclude>**/App.class</exclude>
           </excludes>
+          <!-- Make sure output directory is target for consistency -->
           <outputDirectory>${project.build.directory}</outputDirectory>
         </configuration>
       </plugin>
-
-      <!-- 어셈블리: Ghidra 확장 ZIP 생성 -->
+      
+      <!-- The Assembly Plugin for creating the Ghidra extension ZIP -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
+          <!-- Using the custom assembly descriptor -->
           <descriptors>
             <descriptor>src/assembly/ghidra-extension.xml</descriptor>
           </descriptors>
-          <finalName>GhidraMCP-P-${project.version}</finalName>
+          
+          <!-- The name of the final zip -->
+          <finalName>GhidraMCP-${project.version}</finalName>
+          
+          <!-- Don't append the assembly ID -->
           <appendAssemblyId>false</appendAssemblyId>
         </configuration>
-        <executions>  
+        
+        <executions>
           <execution>
             <id>make-assembly</id>
             <phase>package</phase>
@@ -121,12 +127,12 @@
           </execution>
         </executions>
       </plugin>
-
-      <!-- 런타임 의존성 복사 -->
+      
+      <!-- Copy dependencies to target/lib for the assembly -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.6.1</version>
+        <version>3.1.2</version>
         <executions>
           <execution>
             <id>copy-dependencies</id>
@@ -141,28 +147,6 @@
           </execution>
         </executions>
       </plugin>
-
-      <!-- (선택) 빌드 환경 강제: JDK 21 이상 -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.4.1</version>
-        <executions>
-          <execution>
-            <id>enforce-java</id>
-            <goals><goal>enforce</goal></goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <version>[21,)</version>
-                </requireJavaVersion>
-              </rules>
-              <fail>true</fail>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
     </plugins>
   </build>
 </project>

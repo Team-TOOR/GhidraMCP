@@ -287,6 +287,40 @@ def list_strings(offset: int = 0, limit: int = 2000, filter: str = None) -> list
         params["filter"] = filter
     return safe_get("strings", params)
 
+###################### [Custom Tools by Team-TOOR] ######################
+
+@mcp.tool()
+def get_address_by_symbol_name(symbol_name: str) -> int|None:
+    """
+    심볼 이름으로 주소를 가져옵니다.
+    
+    Args:
+        symbol_name: 심볼 이름
+        
+    Returns:
+        Address as an integer, or None if not found
+        심볼의 이름이 중복되는 경우, 전부 반환됩니다. (type으로 구분 가능)
+    """
+    params = {"symbol_name": symbol_name}
+    return safe_get("get_address_by_symbol_name", params)
+
+@mcp.tool()
+def get_all_symbols(index: int = 0, limit: int = 100) -> list:
+    """
+    모든 심볼 및 주소를 가져옵니다.
+    
+    Args:
+        index: 조회 시작 인덱스 # default: 0
+        limit: 최대 조회 개수 # default: 100
+        
+    Returns:
+        List of symbols with their addresses
+    """
+    params = {"index": index, "limit": limit}
+    return safe_get("all_symbols", params)
+
+##########################################################################
+
 def main():
     parser = argparse.ArgumentParser(description="MCP server for Ghidra")
     parser.add_argument("--ghidra-server", type=str, default=DEFAULT_GHIDRA_SERVER,

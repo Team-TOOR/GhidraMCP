@@ -341,6 +341,38 @@ public class GhidraMCPPlugin extends Plugin {
             sendResponse(exchange, listDefinedStrings(offset, limit, filter));
         });
 
+        // ----------------------------------------------------------------------------------
+        // New API Endpoints
+        // ----------------------------------------------------------------------------------
+        server.createContext("/get_address_by_symbol_name", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String symbolName = qparams.get("symbol_name");
+
+            if (symbolName == null || symbolName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"symbol_name is required\"}");
+                return;
+            }
+
+            String res = getAddressBySymbolName(symbolName);
+            if (res.length() == 0) {
+                sendResponse(exchange, "{\"error\":\"symbol not found\"}");
+                return;
+            }
+
+            sendResponse(exchange, res); // 기존 헬퍼 재사용
+        });
+
+        server.createContext("/all_symbols", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            int index = parseIntOrDefault(qparams.get("index"), 0);
+            int limit = parseIntOrDefault(qparams.get("limit"), 100);
+
+            String res = dumpSymbols(index, limit);
+            sendResponse(exchange, res); // 기존 헬퍼 재사용
+        });
+
+        // ----------------------------------------------------------------------------------
+
         server.setExecutor(null);
         new Thread(() -> {
             try {
@@ -1647,5 +1679,171 @@ public class GhidraMCPPlugin extends Plugin {
             Msg.info(this, "GhidraMCP HTTP server stopped.");
         }
         super.dispose();
+    }
+
+    // -----------------------------------------------------------
+    // 신규 추가 기능
+    // -----------------------------------------------------------
+    private String getAddressBySymbolName(String symbolName) {
+        Program program = getCurrentProgram();
+        if (program == null || symbolName == null || symbolName.isEmpty()) {
+            return "";
+        }
+
+        SymbolTable symTable = program.getSymbolTable();
+        SymbolIterator it = symTable.getSymbols(symbolName);   // 이름 일치 심볼 전부
+        FunctionManager fm = program.getFunctionManager();
+        Address imageBase = program.getImageBase();
+        long ib = (imageBase != null) ? imageBase.getOffset() : 0L;
+
+        StringBuilder sb = new StringBuilder();
+        boolean found = false;
+
+        while (it.hasNext()) {
+            Symbol sym = it.next();
+            Address addr = sym.getAddress();
+            if (addr == null || !addr.isMemoryAddress()) {
+                continue;  // EXTERNAL / 비메모리 주소 제외
+            }
+
+            found = true;
+            Function f = fm.getFunctionAt(addr);
+            if (f == null) {
+                f = fm.getFunctionContaining(addr);
+            }
+
+            Address funcStart = (f != null) ? f.getEntryPoint() : null;
+            long va = addr.getOffset();
+            long rva = va - ib;
+
+            // 한 줄 구성
+            sb.append(String.format(
+                "%s | type=%s | ns=%s | addr=%s | va=0x%X | rva=0x%X",
+                sym.getName(),
+                sym.getSymbolType(),
+                (sym.getParentNamespace() != null ? sym.getParentNamespace().getName(true) : ""),
+                addr.toString(),
+                va,
+                rva
+            ));
+
+            if (funcStart != null && !funcStart.equals(addr)) {
+                sb.append(String.format(" | func_start=%s", funcStart));
+            }
+            sb.append("\n");
+        }
+
+        return found ? sb.toString() : "";
+    }
+
+    // 주소/문자열 유틸
+    private static String jsonEscape(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\"': sb.append("\\\""); break;
+                case '\\': sb.append("\\\\"); break;
+                case '\b': sb.append("\\b");  break;
+                case '\f': sb.append("\\f");  break;
+                case '\n': sb.append("\\n");  break;
+                case '\r': sb.append("\\r");  break;
+                case '\t': sb.append("\\t");  break;
+                default:
+                    if (c < 0x20) sb.append(String.format("\\u%04x", (int)c));
+                    else sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+    
+    private String dumpSymbols(int index, int limit) {
+        Program program = getCurrentProgram();
+        if (program == null) {
+            return "[]";
+        }
+        if (index < 0) index = 0;
+        if (limit <= 0) limit = 100;
+    
+        SymbolTable symTable = program.getSymbolTable();
+        SymbolIterator it = symTable.getAllSymbols(true); // dynamic 포함. 필요시 false
+        Address imageBase = program.getImageBase();
+        long ib = imageBase != null ? imageBase.getOffset() : 0L;
+    
+        // 1) 수집(메모리 주소만), 2) VA 오름차순 정렬
+        class Row {
+            Symbol sym;
+            Address addr;
+            long va;
+            long rva;
+            String ns;
+            String type;
+            boolean primary;
+            Address funcStart; // null 가능
+        }
+        java.util.ArrayList<Row> rows = new java.util.ArrayList<>(4096);
+        FunctionManager fm = program.getFunctionManager();
+    
+        while (it.hasNext()) {
+            Symbol sym = it.next();
+            Address addr = sym.getAddress();
+            if (addr == null || !addr.isMemoryAddress()) continue;
+    
+            long va = addr.getOffset();
+            long rva = va - ib;
+    
+            Function f = fm.getFunctionAt(addr);
+            if (f == null) f = fm.getFunctionContaining(addr);
+            Address fstart = (f != null) ? f.getEntryPoint() : null;
+    
+            String ns = "";
+            Namespace parent = sym.getParentNamespace();
+            if (parent != null) {
+                // true: 글로벌 네임스페이스 포함한 풀패스 (::A::B::C)
+                ns = parent.getName(true);
+            }
+    
+            Row row = new Row();
+            row.sym = sym;
+            row.addr = addr;
+            row.va = va;
+            row.rva = rva;
+            row.ns = ns;
+            row.type = sym.getSymbolType().toString();
+            row.primary = sym.isPrimary();
+            row.funcStart = fstart;
+            rows.add(row);
+        }
+    
+        rows.sort(java.util.Comparator.comparingLong(r -> r.va));
+    
+        // 페이징 범위 산정
+        int start = Math.min(index, rows.size());
+        int end = Math.min(start + limit, rows.size());
+    
+        // 반환 값 구성
+        StringBuilder out = new StringBuilder(Math.min(limit * 160, 1_000_000));
+        for (int i = start; i < end; i++) {
+            Row r = rows.get(i);
+            String name = jsonEscape(r.sym.getName());
+            String ns = jsonEscape(r.ns);
+            String type = jsonEscape(r.type);
+            String addrStr = jsonEscape(r.addr.toString());
+            String funcStartStr = (r.funcStart != null) ? jsonEscape(r.funcStart.toString()) : "";
+    
+            out.append("\"name\":\"").append(name).append("\",")
+               .append("\"type\":\"").append(type).append("\",")
+               .append("\"namespace\":\"").append(ns).append("\",")
+               .append("\"is_primary\":").append(r.primary).append(",")
+               .append("\"address\":\"").append(addrStr).append("\",")
+               .append("\"va\":\"0x").append(Long.toHexString(r.va)).append("\",")
+               .append("\"rva\":\"0x").append(Long.toHexString(r.rva)).append("\"");
+            if (!funcStartStr.isEmpty()) {
+                out.append(",\"func_start\":\"").append(funcStartStr).append("\"");
+            }
+            out.append("\n");
+        }
+        return out.toString();
     }
 }

@@ -117,3 +117,42 @@ The generated zip file includes the built Ghidra plugin and its resources. These
 - lib/GhidraMCP.jar
 - extensions.properties
 - Module.manifest
+
+# Custom Tools
+> by Team-TOOR
+
+## 추가된 도구들
+- `get_address_by_symbol_name`
+  > 25.10.11 update
+  - 심볼 이름으로 주소 정보를 가져오는 도구입니다.
+  - `GET /get_address_by_symbol_name`
+  - 테스트 완료
+  - 예시 결과
+    ```
+    g_whatisthis | type=Function | ns=Global | addr=001014f0 | va=0x1014F0 | rva=0x14F0
+    g_whatisthis | type=Label | ns=Global | addr=00102022 | va=0x102022 | rva=0x2022
+    ...
+    ```
+
+- `get_all_symbols`
+  > 25.10.11 update
+  - 모든 심볼 및 주소 정보를 가져오는 도구입니다.
+  - `GET /all_symbols`
+  - 테스트 완료
+  - 예시 결과
+    ```
+    "name":"ElfComment[0]","type":"Label","namespace":"Global","is_primary":true,"address":".comment::00000000","va":"0x0","rva":"0xfffffffffff00000"
+    "name":"DAT_.shstrtab__00000000","type":"Label","namespace":"Global","is_primary":true,"address":". shstrtab::00000000", "va":"0x0","rva":"0xfffffffffff00000"
+    "name":"Elf64_Shdr_ARRAY__elfSectionHeaders__00000000","type":"Label","namespace":"Global","is_primary":true,   "address":"_elfSectionHeaders::00000000","va":"0x0","rva":"0xfffffffffff00000"
+    "name":"Elf64_Phdr_ARRAY_00100040","type":"Label","namespace":"Global","is_primary":true,"address":"00100040",    "va":"0x100040","rva":"0x40"
+    ...
+    ```
+
+- `make_structure`
+  > TODO
+  - 구조체 제작 도구입니다.
+
+## 플러그인 빌드 및 테스트 정보
+- JDK Version: 21
+- maven Version: 3.6.3
+- Ghidra Version: 11.4.2 Public
