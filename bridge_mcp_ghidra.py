@@ -319,6 +319,112 @@ def get_all_symbols(index: int = 0, limit: int = 100) -> list:
     params = {"index": index, "limit": limit}
     return safe_get("all_symbols", params)
 
+@mcp.tool()
+def set_struct_packing(struct_name: str, enable_packing: bool, pack_value: int = None,
+                       min_alignment: int = None, machine_aligned: bool = None, repack_now: bool = False) -> str:
+    """
+    구조체의 패킹 모드를 설정합니다.
+    
+    Args:
+        struct_name: 구조체 이름
+        enable_packing: 패킹 모드 활성화 여부
+        pack_value: 명시적 패킹 값 (1,2,4,8,16…), None이면 유지
+        min_alignment: 최소 정렬 값, None이면 유지
+        machine_aligned: MachineAligned 여부, None이면 유지
+        repack_now: 즉시 재패킹(repack) 수행 여부 (default: False)
+    Returns:
+        결과 메시지
+    """
+    params = {
+        "structName": struct_name,
+        "enablePacking": enable_packing,
+        "packValue": pack_value,
+        "minAlignment": min_alignment,
+        "machineAligned": machine_aligned,
+        "repackNow": repack_now
+    }
+    return safe_get("set_struct_packing", params)
+
+@mcp.tool()
+def add_or_update_struct_member(struct_name: str, member_name: str, member_type: str,
+                                offset: int = None, comment: str = None, repack_now: bool = False) -> str:
+    """
+    구조체의 멤버를 추가/수정합니다.
+    Args:
+        struct_name: 구조체 이름
+        member_name: 멤버 이름
+        member_type: 멤버 타입 (예: "u32", "char*", "MyOtherStruct*", ...)
+        offset: 구조체 내 오프셋 (기본 None이면 맨 뒤 추가)
+        comment: 멤버에 대한 주석 (기본 None)
+        repack_now: 즉시 재패킹(repack) 수행 여부 (default: False)
+    Returns:
+        추가/수정 후 구조체 이름 및 멤버 요약 정보
+    """
+    params = {
+        "structName": struct_name,
+        "fieldName": member_name,
+        "fieldTypeStr": member_type,
+        "offset": offset if offset is not None else -1,
+        "comment": comment if comment is not None else "",
+        "repackNow": repack_now
+    }
+    return safe_get("add_or_update_struct_member", params)
+
+@mcp.tool()
+def get_structure_info(struct_name: str) -> bool:
+    """
+    구조체의 정보를 조회합니다..
+    Args:
+        struct_name: 구조체 이름
+    Returns:
+        구조체가 존재하면 True, 그렇지 않으면 False
+    """
+    params = {"structName": struct_name}
+    result = safe_get("get_structure_info", params)
+    if result and len(result) == 1:
+        return result[0].strip().lower() == "true"
+    return False
+
+@mcp.tool()
+def listStructures(index: int = 0, limit: int = 100) -> str:
+    """
+    모든 구조체 심볼의 이름을 조회합니다.
+    
+    Args:
+        index: 조회 시작 인덱스  # default: 0
+        limit: 최대 조회 개수   # default: 100
+        
+    Returns:
+        List of symbols with their addresses
+    """
+    params = {"index": index, "limit": limit}
+    return safe_get("list_structures", params)
+
+@mcp.tool()
+def deleteStructMember(struct_name: str, member_name: str) -> str:
+    """
+    구조체 멤버를 삭제합니다.
+    Args:
+        struct_name: 구조체 이름
+        member_name: 멤버 이름
+    Returns:
+        삭제 후 구조체 이름 및 멤버 요약 정보
+    """
+    params = {"structName": struct_name, "fieldName": member_name}
+    return safe_get("delete_struct_member", params)
+
+@mcp.tool()
+def deleteStructure(struct_name: str) -> str:
+    """
+    (사용 주의) 구조체 심볼을 통째로 삭제합니다.
+    Args:
+        struct_name: 구조체 이름
+    Returns:
+        삭제 성공 여부 메시지
+    """
+    params = {"structName": struct_name}
+    return safe_get("delete_structure", params)
+
 ##########################################################################
 
 def main():
@@ -369,4 +475,4 @@ def main():
         
 if __name__ == "__main__":
     main()
-
+    

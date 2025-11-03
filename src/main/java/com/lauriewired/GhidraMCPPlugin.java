@@ -7,10 +7,6 @@ import ghidra.program.model.address.GlobalNamespace;
 import ghidra.program.model.listing.*;
 import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.symbol.*;
-import ghidra.program.model.symbol.ReferenceManager;
-import ghidra.program.model.symbol.Reference;
-import ghidra.program.model.symbol.ReferenceIterator;
-import ghidra.program.model.symbol.RefType;
 import ghidra.program.model.pcode.HighFunction;
 import ghidra.program.model.pcode.HighSymbol;
 import ghidra.program.model.pcode.LocalSymbolMap;
@@ -23,9 +19,6 @@ import ghidra.app.services.CodeViewerService;
 import ghidra.app.services.ProgramManager;
 import ghidra.app.util.PseudoDisassembler;
 import ghidra.app.cmd.function.SetVariableNameCmd;
-import ghidra.program.model.symbol.SourceType;
-import ghidra.program.model.listing.LocalVariableImpl;
-import ghidra.program.model.listing.ParameterImpl;
 import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.exception.InvalidInputException;
 import ghidra.framework.plugintool.PluginInfo;
@@ -36,14 +29,11 @@ import ghidra.util.task.ConsoleTaskMonitor;
 import ghidra.util.task.TaskMonitor;
 import ghidra.program.model.pcode.HighVariable;
 import ghidra.program.model.pcode.Varnode;
-import ghidra.program.model.data.DataType;
-import ghidra.program.model.data.DataTypeManager;
-import ghidra.program.model.data.PointerDataType;
-import ghidra.program.model.data.Undefined1DataType;
-import ghidra.program.model.listing.Variable;
+import ghidra.program.model.data.*;
 import ghidra.app.decompiler.component.DecompilerUtils;
 import ghidra.app.decompiler.ClangToken;
 import ghidra.framework.options.Options;
+import ghidra.app.script.GhidraScript;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -72,6 +62,8 @@ public class GhidraMCPPlugin extends Plugin {
     private static final String PORT_OPTION_NAME = "Server Port";
     private static final int DEFAULT_PORT = 8080;
 
+    private StructOps structOps;
+
     public GhidraMCPPlugin(PluginTool tool) {
         super(tool);
         Msg.info(this, "GhidraMCPPlugin loading...");
@@ -82,6 +74,9 @@ public class GhidraMCPPlugin extends Plugin {
             null, // No help location for now
             "The network port number the embedded HTTP server will listen on. " +
             "Requires Ghidra restart or plugin reload to take effect after changing.");
+
+        TaskMonitor monitor = new ConsoleTaskMonitor();
+        this.structOps = new StructOps(monitor);
 
         try {
             startServer();
@@ -342,7 +337,7 @@ public class GhidraMCPPlugin extends Plugin {
         });
 
         // ----------------------------------------------------------------------------------
-        // New API Endpoints
+        // New API Endpoints (by Team-TOOR)
         // ----------------------------------------------------------------------------------
         server.createContext("/get_address_by_symbol_name", exchange -> {
             Map<String, String> qparams = parseQueryParams(exchange);
@@ -371,6 +366,120 @@ public class GhidraMCPPlugin extends Plugin {
             sendResponse(exchange, res); // 기존 헬퍼 재사용
         });
 
+        server.createContext("/set_struct_packing", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String structName = qparams.get("structName");
+            boolean enablePacking = parseBoolean(qparams.get("enablePacking"));
+            Integer packValue = parseOptionalInt(qparams.get("packValue"));
+            Integer minAlignment = parseOptionalInt(qparams.get("minAlignment"));
+            Boolean machineAligned = parseOptionalBoolean(qparams.get("machineAligned"));
+            boolean repackNow = parseBoolean(qparams.get("repackNow"));
+
+            if (structName == null || structName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"structName is required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = structOps.setStructPacking(
+                program,
+                dtm,
+                structName, 
+                enablePacking, 
+                packValue,
+                minAlignment, 
+                machineAligned, 
+                repackNow
+            );
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/add_or_update_struct_member", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String structName = qparams.get("structName");
+            String fieldTypeStr = qparams.get("fieldTypeStr");
+            String fieldName = qparams.get("fieldName");
+            int offset = parseIntOrDefault(qparams.get("offset"), -1);
+
+            if (structName == null || structName.isBlank() ||
+                fieldTypeStr == null || fieldTypeStr.isBlank() ||
+                fieldName == null || fieldName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"structName, fieldTypeStr, and fieldName are required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = structOps.addOrUpdateStructMember(program, dtm, structName, fieldTypeStr, fieldName, offset);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/get_structure_info", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String structName = qparams.get("structName");
+
+            if (structName == null || structName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"structName is required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = structOps.getStructureInfo(dtm, structName);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/delete_struct_member", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String structName = qparams.get("structName");
+            String fieldTypeStr = qparams.get("fieldTypeStr"); // 선택적
+            String fieldName = qparams.get("fieldName");
+
+            if (structName == null || structName.isBlank() ||
+                fieldName == null || fieldName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"structName and fieldName are required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = structOps.deleteStructMember(program, dtm, structName, fieldTypeStr, fieldName);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/delete_structure", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String structName = qparams.get("structName");
+
+            if (structName == null || structName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"structName is required\"}");
+                return;
+            }
+            
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            boolean res = structOps.deleteStructure(program, dtm, structName);
+            sendResponse(exchange, "{\"deleted\":" + res + "}");
+        });
+
+        server.createContext("/list_structures", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            int start = parseIntOrDefault(qparams.get("index"), 0);
+            int limit = parseIntOrDefault(qparams.get("limit"), 50);
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = structOps.listAllStructures(dtm, start, limit);
+            sendResponse(exchange, res);
+        });
+
         // ----------------------------------------------------------------------------------
 
         server.setExecutor(null);
@@ -384,6 +493,31 @@ public class GhidraMCPPlugin extends Plugin {
             }
         }, "GhidraMCP-HTTP-Server").start();
     }
+
+    // ----------------------------------------------------------------------------------
+    // New Util Methods (by Team-TOOR)
+    // ----------------------------------------------------------------------------------
+
+    private boolean parseBoolean(String value) {
+        if (value == null) return false;
+        return value.equalsIgnoreCase("true") || value.equals("1");
+    }
+
+    private Integer parseOptionalInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Boolean parseOptionalBoolean(String value) {
+        if (value == null || value.isBlank()) return null;
+        return parseBoolean(value);
+    }
+
+    // ----------------------------------------------------------------------------------
 
     // ----------------------------------------------------------------------------------
     // Pagination-aware listing methods
@@ -1682,7 +1816,7 @@ public class GhidraMCPPlugin extends Plugin {
     }
 
     // -----------------------------------------------------------
-    // 신규 추가 기능
+    // 신규 추가 기능: 심볼 이름으로 주소 조회 (by Team-TOOR)
     // -----------------------------------------------------------
     private String getAddressBySymbolName(String symbolName) {
         Program program = getCurrentProgram();
@@ -1735,6 +1869,10 @@ public class GhidraMCPPlugin extends Plugin {
 
         return found ? sb.toString() : "";
     }
+
+    // -----------------------------------------------------------
+    // 신규 추가 기능: 심볼 전체 덤프 (페이징) (by Team-TOOR)
+    // -----------------------------------------------------------
 
     // 주소/문자열 유틸
     private static String jsonEscape(String s) {
@@ -1846,4 +1984,5 @@ public class GhidraMCPPlugin extends Plugin {
         }
         return out.toString();
     }
+
 }

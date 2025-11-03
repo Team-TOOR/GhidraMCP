@@ -122,6 +122,8 @@ The generated zip file includes the built Ghidra plugin and its resources. These
 > by Team-TOOR
 
 ## 추가된 도구들
+
+### 유틸
 - `get_address_by_symbol_name`
   > 25.10.11 update
   - 심볼 이름으로 주소 정보를 가져오는 도구입니다.
@@ -148,11 +150,88 @@ The generated zip file includes the built Ghidra plugin and its resources. These
     ...
     ```
 
-- `make_structure`
-  > TODO
-  - 구조체 제작 도구입니다.
+### 구조체 심볼 생성/수정/삭제/조회
+- `setStructPacking`
+  > 25.10.16 update
+  - 구조체 패킹/얼라인먼트 설정
+  - `GET /set_struct_packing`
+  - 테스트: `http://localhost:8080/set_struct_packing?structName=MyStruct&enablePacking=true&packValue=4&minAlignment=1&machineAligned=false&repackNow=true`
+
+- `addOrUpdateStructMember`
+  > 25.10.16 update
+  - 구조체 멤버 추가/수정
+  - `GET /add_or_update_struct_member`
+  - 테스트: `http://localhost:8080/add_or_update_struct_member?structName=MyStruct&fieldTypeStr=int&fieldName=age`
+
+- `getStructureInfo`
+  > 25.10.16 update
+  - 구조체 정보 조회
+  - `GET /get_structure_info`
+  - 테스트: `http://localhost:8080/get_structure_info?structName=MyStruct`
+
+- `listAllStructures`
+  > 25.10.16 update
+  - 모든 구조체 조회
+  - `GET /list_structures`
+  - 테스트: `http://localhost:8080/list_structures`
+
+- `deleteStructMember`
+  > 25.10.16 update
+  - 구조체 멤버 삭제
+  - `GET /delete_struct_member`
+  - 테스트: `http://localhost:8080/delete_struct_member?structName=MyStruct&fieldName=age`
+
+- `deleteStructure`
+  > 25.10.16 update
+  - 구조체 삭제
+  - `GET /delete_structure`
+  - 테스트: `http://localhost:8080/delete_structure?structName=MyStruct`
+
+### Union 심볼 생성/수정/삭제/조회
+> TODO
+
+### Enum 심볼 생성/수정/삭제/조회
+> TODO
+
+### 메모리 데이터 조회/수정 (Binary Data Read/Patch)
+> TODO
+> 하네스 작성을 위한 분기문 조작에 사용할 수 있을 것
+
+```
+
+
+http://localhost:8080/add_or_update_struct_member?structName=MyStruct&fieldTypeStr=int&fieldName=age&offset=0
+
+http://localhost:8080/has_structure?structName=MyStruct
+
+http://localhost:8080/delete_struct_member?structName=MyStruct&fieldName=age
+
+http://localhost:8080/delete_structure?structName=MyStruct
+
+http://localhost:8080/list_structures
+```
 
 ## 플러그인 빌드 및 테스트 정보
 - JDK Version: 21
 - maven Version: 3.6.3
+  - Build Command: `$ mvn -e -X clean package assembly:single`
 - Ghidra Version: 11.4.2 Public
+
+## Trouble Shooting
+
+### Case 1: Ghidra에 Extention을 추가했음에도, GhidraMCP Server가 실행 안되는 경우
+- 사전 체크 리스트
+  - `Code Browser - Edit - Tool Options`에 `GhidraMCP HTTP Server`가 있는지 확인
+- 해결 방법
+  - 경우 1. 만약 위 플러그인이 있다면, 포트 번호가 잘 설정되어 있는지 확인해봅니다.
+  - 경우 2. 만약 위 플러그인이 없다면 Ghidra의 `CodeBrowser.tcd`가 손상되었을 가능성이 높습니다.
+    1. 기존에 설치한(문제가 있는) GhidraMCP 플러그인을 삭제합니다.
+    2. Ghidra 프로세스를 종료합니다.
+    3. 아래 경로로 이동하여 `CodeBrowser.tcd` 파일을 삭제합니다.
+      - 윈도우: `C:\Users\<USER>\AppData\Roaming\ghidra\ghidra_11.4.2_PUBLIC\tools\CodeBrowser.tcd`
+        - 또는 `_code_browser.tcd`
+      - 리눅스: `~/.ghidra/.ghidra_<버전>/tools/CodeBrowser.tcd`
+    4. Ghidra 프로세스를 다시 실행합니다. Ghidra 프로세스 메인 화면에서 아래의 작업을 통해 CodeBrowser 도구를 재설치해줍니다.
+      - `Tools -> Import Default Tools -> defaultTools/CodeBrowser.tool 체크 -> OK 버튼 클릭`
+    5. 다시 GhidraMCP 플러그인을 설치합니다.
+
