@@ -151,59 +151,78 @@ The generated zip file includes the built Ghidra plugin and its resources. These
     ```
 
 ### 구조체 심볼 생성/수정/삭제/조회
-- `setStructPacking`
+- `set_struct_packing`
   > 25.10.16 update
   - 구조체 패킹/얼라인먼트 설정
   - `GET /set_struct_packing`
   - 테스트: `http://localhost:8080/set_struct_packing?structName=MyStruct&enablePacking=true&packValue=4&minAlignment=1&machineAligned=false&repackNow=true`
 
-- `addOrUpdateStructMember`
+- `add_or_update_struct_member`
   > 25.10.16 update
   - 구조체 멤버 추가/수정
   - `GET /add_or_update_struct_member`
   - 테스트: `http://localhost:8080/add_or_update_struct_member?structName=MyStruct&fieldTypeStr=int&fieldName=age`
 
-- `getStructureInfo`
+- `get_structure_info`
   > 25.10.16 update
   - 구조체 정보 조회
   - `GET /get_structure_info`
   - 테스트: `http://localhost:8080/get_structure_info?structName=MyStruct`
 
-- `listAllStructures`
+- `list_structures`
   > 25.10.16 update
   - 모든 구조체 조회
   - `GET /list_structures`
   - 테스트: `http://localhost:8080/list_structures`
 
-- `deleteStructMember`
+- `delete_struct_member`
   > 25.10.16 update
   - 구조체 멤버 삭제
   - `GET /delete_struct_member`
   - 테스트: `http://localhost:8080/delete_struct_member?structName=MyStruct&fieldName=age`
 
-- `deleteStructure`
+- `delete_structure`
   > 25.10.16 update
   - 구조체 삭제
   - `GET /delete_structure`
   - 테스트: `http://localhost:8080/delete_structure?structName=MyStruct`
 
 ### Union 심볼 생성/수정/삭제/조회
-> TODO
+- `set_union_alignment`
+  > 25.11.13 update
+  - 유니온 패킹/얼라인먼트 설정
+  - `GET /set_union_alignment`
+  - 테스트: `http://localhost:8080/set_union_alignment?unionName=MyUnion&minAlignment=1&machineAligned=false`
 
-```
-GET /set_union_alignment?unionName=MyUnion&minAlignment=1&machineAligned=false
+- `add_or_update_union_member`
+  > 25.11.13 update
+  - 유니온 멤버 추가/수정
+  - `GET /add_or_update_union_member`
+  - 테스트: `http://localhost:8080/add_or_update_union_member?unionName=MyUnion&fieldTypeStr=int&fieldName=value`
 
-GET /add_or_update_union_member?unionName=MyUnion&fieldTypeStr=int&fieldName=value
+- `get_union_info`
+  > 25.11.13 update
+  - 유니온 정보 조회
+  - `GET /get_union_info`
+  - 테스트: `http://localhost:8080/get_union_info?unionName=MyUnion`
 
-GET /get_union_info?unionName=MyUnion
+- `list_unions`
+  > 25.11.13 update
+  - 모든 유니온 조회
+  - `GET /list_unions`
+  - 테스트: `http://localhost:8080/list_unions?startIndex=0&limit=100`
 
-GET /list_unions?startIndex=0&limit=100
+- `delete_union_member`
+  > 25.11.13 update
+  - 유니온 멤버 삭제
+  - `GET /delete_union_member`
+  - 테스트: `http://localhost:8080/delete_union_member?unionName=MyUnion&fieldName=value`
 
-GET /delete_union_member?unionName=MyUnion&fieldName=value
-
-GET /delete_union?unionName=MyUnion
-```
-
+- `delete_union`
+  > 25.11.13 update
+  - 유니온 삭제
+  - `GET /delete_union`
+  - 테스트: `http://localhost:8080/delete_union?unionName=MyUnion`
 
 ### Enum 심볼 생성/수정/삭제/조회
 > TODO
@@ -211,6 +230,28 @@ GET /delete_union?unionName=MyUnion
 ### 메모리 데이터 조회/수정 (Binary Data Read/Patch)
 > TODO
 > 하네스 작성을 위한 분기문 조작에 사용할 수 있을 것
+
+### TODO List
+[X] 유틸 기능
+  [X] 심볼 이름으로 주소 정보 조회 기능
+  [X] 모든 심볼 정보 조회 기능
+[X] 구조체 심볼 생성/수정/삭제/조회 기능
+  [X] 구조체 패킹/얼라인먼트 설정
+  [X] 구조체 멤버 추가/수정
+  [X] 구조체 정보 조회
+  [X] 모든 구조체 조회
+  [X] 구조체 멤버 삭제
+  [X] 구조체 삭제
+[X] 유니온 심볼 생성/수정/삭제/조회 기능
+  [X] 유니온 패킹/얼라인먼트 설정
+  [X] 유니온 멤버 추가/수정
+  [X] 유니온 정보 조회
+  [X] 모든 유니온 조회
+  [X] 유니온 멤버 삭제
+  [X] 유니온 삭제
+[ ] Enum 심볼 생성/수정/삭제/조회 기능
+[ ] 메모리 데이터 조회/수정 기능 (Binary Data Read/Patch)
+[ ] 구조체/유니온/Enum 기능 통합 (최적화)
 
 ## 플러그인 빌드 및 테스트 정보
 - JDK Version: 21
