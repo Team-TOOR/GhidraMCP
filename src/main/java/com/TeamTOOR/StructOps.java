@@ -1,4 +1,4 @@
-package com.lauriewired;
+package com.TeamTOOR;
 
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.data.*;

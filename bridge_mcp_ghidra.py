@@ -319,6 +319,8 @@ def get_all_symbols(index: int = 0, limit: int = 100) -> list:
     params = {"index": index, "limit": limit}
     return safe_get("all_symbols", params)
 
+## Struct 관련 툴 ##
+
 @mcp.tool()
 def set_struct_packing(struct_name: str, enable_packing: bool, pack_value: int = None,
                        min_alignment: int = None, machine_aligned: bool = None, repack_now: bool = False) -> str:
@@ -386,7 +388,7 @@ def get_structure_info(struct_name: str) -> bool:
     return False
 
 @mcp.tool()
-def listStructures(index: int = 0, limit: int = 100) -> str:
+def list_structures(index: int = 0, limit: int = 100) -> str:
     """
     모든 구조체 심볼의 이름을 조회합니다.
     
@@ -401,7 +403,7 @@ def listStructures(index: int = 0, limit: int = 100) -> str:
     return safe_get("list_structures", params)
 
 @mcp.tool()
-def deleteStructMember(struct_name: str, member_name: str) -> str:
+def delete_struct_member(struct_name: str, member_name: str) -> str:
     """
     구조체 멤버를 삭제합니다.
     Args:
@@ -414,7 +416,7 @@ def deleteStructMember(struct_name: str, member_name: str) -> str:
     return safe_get("delete_struct_member", params)
 
 @mcp.tool()
-def deleteStructure(struct_name: str) -> str:
+def delete_structure(struct_name: str) -> str:
     """
     (사용 주의) 구조체 심볼을 통째로 삭제합니다.
     Args:
@@ -424,6 +426,106 @@ def deleteStructure(struct_name: str) -> str:
     """
     params = {"structName": struct_name}
     return safe_get("delete_structure", params)
+
+
+## Union 관련 툴 ##
+
+@mcp.tool()
+def set_union_alignment(union_name: str, min_alignment: int, machine_aligned: bool) -> str:
+    """
+    유니온의 얼라인먼트를 설정합니다.
+    
+    Args:
+        union_name: 유니온 이름
+        min_alignment: 최소 정렬 값
+        machine_aligned: MachineAligned 여부
+    Returns:
+        결과 메시지
+    """
+    params = {
+        "unionName": union_name,
+        "minAlignment": min_alignment,
+        "machineAligned": machine_aligned
+    }
+    return safe_get("set_union_alignment", params)
+
+@mcp.tool()
+def add_or_update_union_member(union_name: str, fileld_type_str: str, filed_name: str) -> str:
+    """
+    유니온의 멤버를 추가/수정합니다.
+    Args:
+        union_name: 유니온 이름
+        fileld_type_str: 멤버 타입 문자열
+        filed_name: 멤버 이름
+    Returns:
+        추가/수정 후 유니온 이름 및 멤버 요약 정보
+    """    
+    params = {
+        "unionName": union_name,
+        "fieldTypeStr": fileld_type_str,
+        "fieldName": filed_name
+    }
+    return safe_get("add_or_update_union_member", params)
+
+@mcp.tool()
+def get_union_info(union_name: str) -> bool:
+    """
+    유니온의 정보를 조회합니다.
+    Args:
+        union_name: 유니온 이름
+    Returns:
+        유니온이 존재하면 True, 그렇지 않으면 False
+    """
+    params = {"unionName": union_name}
+    result = safe_get("get_union_info", params)
+    if result and len(result) == 1:
+        return result[0].strip().lower() == "true"
+    return False
+
+@mcp.tool()
+def list_unions(index: int = 0, limit: int = 100) -> str:
+    """
+    모든 유니온 심볼의 이름을 조회합니다.
+
+    Args:
+        index: 조회 시작 인덱스  # default: 0
+        limit: 최대 조회 개수   # default: 100
+
+    Returns:
+        List of symbols with their addresses
+    """
+    params = {"index": index, "limit": limit}
+    return safe_get("list_unions", params)
+
+@mcp.tool()
+def delete_union_member(union_name: str, fileld_type_str: str, filed_name: str) -> str:
+    """
+    유니온 멤버를 삭제합니다.
+    Args:
+        union_name: 유니온 이름
+        fileld_type_str: 멤버 타입 문자열
+        filed_name: 멤버 이름
+    Returns:
+        삭제 후 유니온 이름 및 멤버 요약 정보
+    """
+    params = {
+        "unionName": union_name,
+        "fieldTypeStr": fileld_type_str,
+        "fieldName": filed_name
+    }
+    return safe_get("delete_union_member", params)
+
+@mcp.tool()
+def delete_union(union_name: str) -> str:
+    """
+    (사용 주의) 유니온 심볼을 통째로 삭제합니다.
+    Args:
+        union_name: 유니온 이름
+    Returns:
+        삭제 성공 여부 메시지
+    """
+    params = {"unionName": union_name}
+    return safe_get("delete_union", params)
 
 ##########################################################################
 

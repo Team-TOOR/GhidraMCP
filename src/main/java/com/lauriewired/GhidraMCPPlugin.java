@@ -48,6 +48,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.TeamTOOR.*; // Custom
+
 @PluginInfo(
     status = PluginStatus.RELEASED,
     packageName = ghidra.app.DeveloperPluginPackage.NAME,
@@ -63,6 +65,7 @@ public class GhidraMCPPlugin extends Plugin {
     private static final int DEFAULT_PORT = 8080;
 
     private StructOps structOps;
+    private UnionOps unionOps;
 
     public GhidraMCPPlugin(PluginTool tool) {
         super(tool);
@@ -77,6 +80,7 @@ public class GhidraMCPPlugin extends Plugin {
 
         TaskMonitor monitor = new ConsoleTaskMonitor();
         this.structOps = new StructOps(monitor);
+        this.unionOps = new UnionOps(monitor);
 
         try {
             startServer();
@@ -366,6 +370,10 @@ public class GhidraMCPPlugin extends Plugin {
             sendResponse(exchange, res); // 기존 헬퍼 재사용
         });
 
+        // ----------------------------------------------------------------------------------
+        // New API Endpoints - Struct (by Team-TOOR)
+        // ----------------------------------------------------------------------------------
+
         server.createContext("/set_struct_packing", exchange -> {
             Map<String, String> qparams = parseQueryParams(exchange);
             String structName = qparams.get("structName");
@@ -477,6 +485,117 @@ public class GhidraMCPPlugin extends Plugin {
             DataTypeManager dtm = program.getDataTypeManager();
 
             String res = structOps.listAllStructures(dtm, start, limit);
+            sendResponse(exchange, res);
+        });
+
+        // ----------------------------------------------------------------------------------
+        // New API Endpoints - Union (by Team-TOOR)
+        // ----------------------------------------------------------------------------------
+
+        server.createContext("/set_union_alignment", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String unionName = qparams.get("unionName");
+            Integer minAlignment = parseOptionalInt(qparams.get("minAlignment"));
+            Boolean machineAligned = parseOptionalBoolean(qparams.get("machineAligned"));
+
+            if (unionName == null || unionName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"unionName is required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = unionOps.setUnionAlignment(
+                program,
+                dtm,
+                unionName, 
+                minAlignment, 
+                machineAligned
+            );
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/add_or_update_union_member", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String unionName = qparams.get("unionName");
+            String fieldTypeStr = qparams.get("fieldTypeStr");
+            String fieldName = qparams.get("fieldName");
+
+            if (unionName == null || unionName.isBlank() ||
+                fieldTypeStr == null || fieldTypeStr.isBlank() ||
+                fieldName == null || fieldName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"unionName, fieldTypeStr, and fieldName are required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = unionOps.addOrUpdateUnionMember(program, dtm, unionName, fieldTypeStr, fieldName);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/get_union_info", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String unionName = qparams.get("unionName");
+
+            if (unionName == null || unionName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"unionName is required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = unionOps.getUnionInfo(dtm, unionName);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/delete_union_member", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String unionName = qparams.get("unionName");
+            String fieldTypeStr = qparams.get("fieldTypeStr"); // 선택적
+            String fieldName = qparams.get("fieldName");
+
+            if (unionName == null || unionName.isBlank() ||
+                fieldName == null || fieldName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"unionName and fieldName are required\"}");
+                return;
+            }
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = unionOps.deleteUnionMember(program, dtm, unionName, fieldTypeStr, fieldName);
+            sendResponse(exchange, res);
+        });
+
+        server.createContext("/delete_union", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            String unionName = qparams.get("unionName");
+
+            if (unionName == null || unionName.isBlank()) {
+                sendResponse(exchange, "{\"error\":\"unionName is required\"}");
+                return;
+            }
+            
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            boolean res = unionOps.deleteUnion(program, dtm, unionName);
+            sendResponse(exchange, "{\"deleted\":" + res + "}");
+        });
+
+        server.createContext("/list_unions", exchange -> {
+            Map<String, String> qparams = parseQueryParams(exchange);
+            int start = parseIntOrDefault(qparams.get("index"), 0);
+            int limit = parseIntOrDefault(qparams.get("limit"), 50);
+
+            Program program = getCurrentProgram();
+            DataTypeManager dtm = program.getDataTypeManager();
+
+            String res = unionOps.listAllUnions(dtm, start, limit);
             sendResponse(exchange, res);
         });
 

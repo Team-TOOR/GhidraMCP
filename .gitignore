@@ -52,3 +52,8 @@ replay_pid*
 # Third party JAR files from Ghidra
 lib/*.jar
 
+# test
+test/**/*.bin
+
+# release
+release/

@@ -190,26 +190,27 @@ The generated zip file includes the built Ghidra plugin and its resources. These
 ### Union 심볼 생성/수정/삭제/조회
 > TODO
 
+```
+GET /set_union_alignment?unionName=MyUnion&minAlignment=1&machineAligned=false
+
+GET /add_or_update_union_member?unionName=MyUnion&fieldTypeStr=int&fieldName=value
+
+GET /get_union_info?unionName=MyUnion
+
+GET /list_unions?startIndex=0&limit=100
+
+GET /delete_union_member?unionName=MyUnion&fieldName=value
+
+GET /delete_union?unionName=MyUnion
+```
+
+
 ### Enum 심볼 생성/수정/삭제/조회
 > TODO
 
 ### 메모리 데이터 조회/수정 (Binary Data Read/Patch)
 > TODO
 > 하네스 작성을 위한 분기문 조작에 사용할 수 있을 것
-
-```
-
-
-http://localhost:8080/add_or_update_struct_member?structName=MyStruct&fieldTypeStr=int&fieldName=age&offset=0
-
-http://localhost:8080/has_structure?structName=MyStruct
-
-http://localhost:8080/delete_struct_member?structName=MyStruct&fieldName=age
-
-http://localhost:8080/delete_structure?structName=MyStruct
-
-http://localhost:8080/list_structures
-```
 
 ## 플러그인 빌드 및 테스트 정보
 - JDK Version: 21
